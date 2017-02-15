@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<style>
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: auto;
+  position: relative;
+  width: 960px;
+}
+
+text {
+  font: 0.75rem sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+form {
+  position: relative;
+  font: 0.75rem sans-serif;
+  right: 10px;
+  top: 10px;
+}
+
+</style>
+
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
+</head>
+<body>
+<h2>WTID 資料視覺化</h2>
+<div>
+  <p>新玩具，測試用</p>
+</div>
+<div class="check">
+  <form>
+    <!--
+    <label><input type="checkbox" name="category" value="avg_per_unit"> avg_per_unit</label>
+    <label><input type="checkbox" name="category" value="bottom90" checked> bottom90</label>
+    -->
+  </form>
+</div>
+<script>
+
+var margin = {top: 50, right: 90, bottom: 30, left: 90},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var initialCat = "底層90",
+    currentCat = [],
+    thisCat = initialCat,
+    initalX = width, initalY = -50,
+    finalY = 0,
+    currentMax = currentMin = 0,
+    parseDate = d3.time.format("%Y").parse;
+
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .ticks(15)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var line = d3.svg.line()
+    /*.interpolate("basis")*/
+    .x(function(d) { return x(d.year); });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+function addCheckbox(cat) {
+  if (cat === initialCat) {
+    d3.select("form")
+    .append("label")
+    .text(showedName[cat])
+    .append("input")
+    .attr("type", "checkbox")
+    .attr("value", cat)
+    .attr("checked", true)
+    .attr("name", "category");
+  } 
+  else {
+    d3.select("form")
+    .append("label")
+    .text(showedName[cat])
+    .append("input")
+    .attr("type", "checkbox")
+    .attr("value", cat)
+    .attr("name", "category");
+  }
+};
+
+function deleteEscape(inputText) {
+  inputText = inputText.replace(/\./g, "");
+  inputText = inputText.replace(/\-/g, "");
+  inputText = inputText.replace(/\%/g, "");
+  inputText = inputText.replace(/\//g, "");
+  return inputText;
+}
+
+d3.csv("wtid_avg_icm.csv", function(error, data) {
+  if (error) throw error;
+
+  showedName = {};
+
+  Object.keys(data[0]).forEach(function (key) {
+    if (key !== "year") {
+      showedName[deleteEscape(key)] = key;
+      addCheckbox(deleteEscape(key));
+    }
+  });
+
+  data.forEach(function(d) {
+    d.year = parseDate(d.year);
+    Object.keys(d).forEach(function (key) {
+      if (key !== "year") {
+        newKey = deleteEscape(key);
+        d[newKey] = +d[key]/10;
+        delete d[key];
+      }
+    });
+  });
+
+  x.domain([data[0].year, data[data.length - 1].year]);
+  currentMin = d3.min(data, function(d) { return d[initialCat];});
+  secondMin = currentMin;
+
+  function updateYAxis(category) {
+    y.domain(d3.extent(data, function(d) { return d[category]; }));
+  }; // end of pdateYAxis(category)
+  
+  function addLine(category) {
+
+    currentCat.push(category);
+    thisCat = category;
+    // for axis change
+    if (d3.max(data, function(d) { return d[category];}) > currentMax) {
+      secondMax = currentMax;
+      currentMax = d3.max(data, function(d) { return d[category];})
+    };
+    if (d3.min(data, function(d) { return d[category];}) < currentMin) {
+      secondMin = currentMin;
+      currentMin = d3.min(data, function(d) { return d[category];});
+    };
+
+    line.y(function(d) { return initalY; });
+  
+    svg.append("path")
+        .datum(data)
+        .attr("id", function(d) { return "l"+category; })
+        .attr("class", "line")
+        .attr("d", line);
+
+    line.y(function(d) { return y(d[category]); });
+
+    svg.append("text")
+        .datum(data[data.length - 1])
+        .attr("class", "label")
+        .attr("id", function(d) { return "t"+category; })
+        .attr("transform", "translate(" + initalX + "," + initalY + ")")
+        .attr("x", 3)
+        .attr("dy", ".35em")
+        .text(showedName[category]);
+
+    var t0 =svg.transition().duration(750);
+    t0.select("#l"+category).attr("d", line);
+    t0.select("#t"+category).attr("transform", transform);
+
+  }; // end of addLine(category)
+
+  updateYAxis(initialCat);
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("年所得總額（萬元）");
+
+  addLine(initialCat);
+
+  d3.selectAll("input").on("change", change);
+
+  function change() {
+
+    category = this.value;
+    check = this.checked;
+
+    if (check === false ) {
+      var t1 = svg.transition().duration(500);
+      currentCat.splice(currentCat.indexOf(category), 1);
+      y.domain(getCurrentMinMax(currentCat));
+      t1.select("#l"+category).attr("d", line).remove();
+      t1.select("#t"+category).attr("y", finalY+height*2).remove();
+
+      var t1 = svg.transition().duration(750);
+        for (k in currentCat) {
+          console.log(k);
+          line.y(function(d) { return y(d[currentCat[k]]); });
+          t1.select("#l"+currentCat[k]).attr("d", line);
+          thisCat = currentCat[k];
+          t1.select("#t"+currentCat[k]).attr("transform", transform);
+        }
+      t1.selectAll(".y.axis").call(yAxis);
+      console.log(currentCat);
+
+      /*
+      if (d3.max(data, function(d) { return d[category];}) > currentMax) {
+
+        y.domain([currentMin, d3.max(data, function(d) { return d[category]; })] );
+
+        var t1 = svg.transition().duration(750);
+        for (k in currentCat) {
+          console.log(k);
+          line.y(function(d) { return y(d[currentCat[k]]); });
+          t1.select("#l"+currentCat[k]).attr("d", line);
+          thisCat = currentCat[k];
+          t1.select("#t"+currentCat[k]).attr("transform", transform);
+        }
+        t1.selectAll(".y.axis").call(yAxis);
+       */
+      // remove from currentCat
+      //currentCat.splice(currentCat.indexOf(category), 1);
+    } else {
+      addLine(category);
+      y.domain(getCurrentMinMax(currentCat));
+            var t1 = svg.transition().duration(750);
+        for (k in currentCat) {
+          console.log(k);
+          line.y(function(d) { return y(d[currentCat[k]]); });
+          t1.select("#l"+currentCat[k]).attr("d", line);
+          thisCat = currentCat[k];
+          t1.select("#t"+currentCat[k]).attr("transform", transform);
+        }
+      t1.selectAll(".y.axis").call(yAxis);
+      console.log(currentCat);
+    }
+      /*
+      if (d3.max(data, function(d) { return d[category];}) > currentMax) {
+
+        y.domain([currentMin, d3.max(data, function(d) { return d[category]; })] );
+
+        addLine(category);
+
+        var t1 = svg.transition().duration(750);
+        for (k in currentCat) {
+          console.log(k);
+          line.y(function(d) { return y(d[currentCat[k]]); });
+          t1.select("#l"+currentCat[k]).attr("d", line);
+          thisCat = currentCat[k];
+          t1.select("#t"+currentCat[k]).attr("transform", transform);
+        }
+        t1.selectAll(".y.axis").call(yAxis);
+        
+      } 
+      else if (d3.min(data, function(d) { return d[category];}) < currentMin) {
+        y.domain([d3.min(data, function(d) { return d[category]; }), currentMax] );
+
+        addLine(category);
+
+        var t1 = svg.transition().duration(750);
+        for (k in currentCat) {
+          console.log(k);
+          line.y(function(d) { return y(d[currentCat[k]]); });
+          t1.select("#l"+currentCat[k]).attr("d", line);
+          thisCat = currentCat[k];
+          t1.select("#t"+currentCat[k]).attr("transform", transform);
+        }
+        t1.selectAll(".y.axis").call(yAxis);
+      } 
+      else {
+        addLine(category);
+      }
+      */
+    } // end of change()
+    
+  function getCurrentMinMax(currentCat) {
+    var max = 0, min = data[0][thisCat]
+    data.forEach(function(d) {
+      currentCat.forEach(function (key) {
+        if (key !== "year") {
+          if (d[key] < min) {
+            min = d[key];
+          }
+          else if (d[key] > max) {
+            max = d[key];
+          }
+        }
+      });
+    });
+    return [min, max]; 
+  };
+
+  function transform(d) {
+    return "translate(" + x(d.year) + "," + y(d[thisCat]) + ")";
+  }
+});
+
+</script>
+</body>
+</html>
