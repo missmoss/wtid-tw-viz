@@ -62,7 +62,7 @@ form {
 </div>
 <script>
 
-var margin = {top: 50, right: 90, bottom: 30, left: 90},
+var margin = {top: 50, right: 125, bottom: 30, left: 50},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
@@ -102,22 +102,26 @@ var svg = d3.select("body").append("svg")
 function addCheckbox(cat) {
   if (cat === initialCat) {
     d3.select("form")
-    .append("label")
-    .text(showedName[cat])
     .append("input")
     .attr("type", "checkbox")
     .attr("value", cat)
     .attr("checked", true)
     .attr("name", "category");
+
+    d3.select("form")
+    .append("label")
+    .text(showedName[cat]+" ");
   } 
   else {
     d3.select("form")
-    .append("label")
-    .text(showedName[cat])
     .append("input")
     .attr("type", "checkbox")
     .attr("value", cat)
     .attr("name", "category");
+
+    d3.select("form")
+    .append("label")
+    .text(showedName[cat]+" ");
   }
 };
 
@@ -243,75 +247,22 @@ d3.csv("wtid_avg_icm.csv", function(error, data) {
       t1.selectAll(".y.axis").call(yAxis);
       console.log(currentCat);
 
-      /*
-      if (d3.max(data, function(d) { return d[category];}) > currentMax) {
-
-        y.domain([currentMin, d3.max(data, function(d) { return d[category]; })] );
-
-        var t1 = svg.transition().duration(750);
-        for (k in currentCat) {
-          console.log(k);
-          line.y(function(d) { return y(d[currentCat[k]]); });
-          t1.select("#l"+currentCat[k]).attr("d", line);
-          thisCat = currentCat[k];
-          t1.select("#t"+currentCat[k]).attr("transform", transform);
-        }
-        t1.selectAll(".y.axis").call(yAxis);
-       */
-      // remove from currentCat
-      //currentCat.splice(currentCat.indexOf(category), 1);
     } else {
       addLine(category);
       y.domain(getCurrentMinMax(currentCat));
-            var t1 = svg.transition().duration(750);
-        for (k in currentCat) {
-          console.log(k);
-          line.y(function(d) { return y(d[currentCat[k]]); });
-          t1.select("#l"+currentCat[k]).attr("d", line);
-          thisCat = currentCat[k];
-          t1.select("#t"+currentCat[k]).attr("transform", transform);
-        }
+      var t1 = svg.transition().duration(750);
+      for (k in currentCat) {
+      	  console.log(k);
+		  line.y(function(d) { return y(d[currentCat[k]]); });
+		  t1.select("#l"+currentCat[k]).attr("d", line);
+		  thisCat = currentCat[k];
+		  t1.select("#t"+currentCat[k]).attr("transform", transform);
+	  }
       t1.selectAll(".y.axis").call(yAxis);
       console.log(currentCat);
     }
-      /*
-      if (d3.max(data, function(d) { return d[category];}) > currentMax) {
 
-        y.domain([currentMin, d3.max(data, function(d) { return d[category]; })] );
-
-        addLine(category);
-
-        var t1 = svg.transition().duration(750);
-        for (k in currentCat) {
-          console.log(k);
-          line.y(function(d) { return y(d[currentCat[k]]); });
-          t1.select("#l"+currentCat[k]).attr("d", line);
-          thisCat = currentCat[k];
-          t1.select("#t"+currentCat[k]).attr("transform", transform);
-        }
-        t1.selectAll(".y.axis").call(yAxis);
-        
-      } 
-      else if (d3.min(data, function(d) { return d[category];}) < currentMin) {
-        y.domain([d3.min(data, function(d) { return d[category]; }), currentMax] );
-
-        addLine(category);
-
-        var t1 = svg.transition().duration(750);
-        for (k in currentCat) {
-          console.log(k);
-          line.y(function(d) { return y(d[currentCat[k]]); });
-          t1.select("#l"+currentCat[k]).attr("d", line);
-          thisCat = currentCat[k];
-          t1.select("#t"+currentCat[k]).attr("transform", transform);
-        }
-        t1.selectAll(".y.axis").call(yAxis);
-      } 
-      else {
-        addLine(category);
-      }
-      */
-    } // end of change()
+  } // end of change()
     
   function getCurrentMinMax(currentCat) {
     var max = 0, min = data[0][thisCat]
